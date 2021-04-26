@@ -10,9 +10,9 @@ on:
       - completed
 
 jobs:
-  process-artifacts:
+  test-download-artifacts:
     runs-on: ubuntu-latest
-    name: Process artifacts
+    name: test download-artifacts
     steps:
       - uses: actions/checkout@v2
       - name: Download and extract artifacts
@@ -30,3 +30,44 @@ jobs:
         run: |
           [[ ! -f artifacts/test.not-download.zip ]]
           [[ ! -f artifacts/test.not-download/test-file.not-download ]]
+
+
+  test-get-artifacts-single:
+    runs-on: ubuntu-latest
+    name: test get-artifacts single job
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download and extract single run's artifacts.
+        uses: ./download-artifacts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          workflow_run_id: ${{ github.event.workflow_run.id }}
+          artifacts: test-file.download
+          target_dir: /tmp/downloads/
+          unzip: true
+      - name: Test that "test.download" got downloaded
+        run: |
+          [[ -f  /tmp/downloads/${{ github.event.workflow_run.id }}/test-file.download ]]
+      - name: Test that "test.not-download" did not get downloaded
+        run: |
+          [[ ! -f  /tmp/downloads/${{ github.event.workflow_run.id }}/test-file.not-download ]]
+
+  test-get-artifacts-multiple:
+    runs-on: ubuntu-latest
+    name: test get-artifacts-multiple
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download and extract single run's artifacts.
+        uses: ./download-artifacts
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: create-artifacts.yml
+          artifacts: test-file.download test-file.not-download
+          branch: main
+          target_dir: /tmp/downloads/
+          unzip: true
+      - name: Test that "test.download" got downloaded
+        run: |
+          [[ -f /tmp/downloads/${{ github.event.workflow_run.id }}/test-file.download ]]
+          [[ -f /tmp/downloads/${{ github.event.workflow_run.id }}/test-file.not-download ]]
+          [[ ( ls -l /tmp/downloads/ | wc -l ) -gt 1 ]]
